@@ -1,8 +1,9 @@
-// =========================================
-// RE:VERSE // THE FINAL TERMINAL v3.0
-// =========================================
+// =============================================================================
+// RE:VERSE // PROJECT-AI ELITE SYSTEM ENGINE v3.5
+// [RE-CONSTRUCTED FOR EXTREME INTERFACE FEEDBACK]
+// =============================================================================
 
-// --- Firebase初期化（自身のプロジェクト設定を反映させてください） ---
+// --- 0. [FIREBASE 設定] ---
 const firebaseConfig = {
     apiKey: "AIzaSyDAZm_VV_n3xoFUqvQTfH6_epkeclvCQwg",
     authDomain: "re-verse-feebc.firebaseapp.com",
@@ -15,360 +16,393 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// --- ランク定数 ---
+// --- 1. [定数 & アカウント定義] ---
 const RANK_NAMES = ["C-", "C", "C+", "B-", "B", "B+", "A-", "A", "A+", "S"];
-
-// --- グローバル変数 ---
-let agent = { name: "", protocol: "", pts: 0, level: 0 };
-let myId = ""; // "p1" or "p2"
-let roomId = "";
-let roomData = null;
+let agentProfile = { name: "", protocol: "", pts: 0, level: 0 };
+let currentRoomId = "";
+let myRole = ""; // "p1"(Round) or "p2"(Triangle)
 let selectedIdx = -1;
-let timerInt = null;
-let alreadyProcessedResult = false;
+let battleTimerInt = null;
+let currentRoomData = null;
+let isResultProcessed = false;
 
-// --- 1. アカウント管理システム ---
+// --- 2. [初期化・アカウントシステム] ---
 window.onload = () => {
-    loadLocalAccount();
-    create6x6Board();
-    listenToNetworkSignals();
+    setupProfile();
+    initSignalLog();
+    initGridBoard();
 };
 
-function loadLocalAccount() {
-    const saved = localStorage.getItem('REVERSE_PROFILE');
+function setupProfile() {
+    const saved = localStorage.getItem('REVERSE_PROFILE_V35');
     if (!saved) {
-        showScreen('screen-auth');
+        switchView('screen-auth');
     } else {
-        agent = JSON.parse(saved);
-        syncAccountWithServer();
-        updateProfileUI();
-        showScreen('screen-lobby');
-    }
-}
-
-async function syncAccountWithServer() {
-    // サーバーから最新のポイント・ランク情報を取得
-    const doc = await db.collection('users').doc(agent.protocol).get();
-    if (doc.exists) {
-        agent = doc.data();
-        updateProfileUI();
+        agentProfile = JSON.parse(saved);
+        refreshHeaderUI();
+        switchView('screen-lobby');
     }
 }
 
 document.getElementById('btn-auth-save').onclick = async () => {
-    const n = document.getElementById('reg-name').value.trim();
-    const p = document.getElementById('reg-id').value.trim();
-    if (!n || !p) return alert("識別情報が不足しています。");
-
-    agent = { name: n, protocol: p, pts: 0, level: 0 };
-    await db.collection('users').doc(p).set(agent);
-    localStorage.setItem('REVERSE_PROFILE', JSON.stringify(agent));
+    const nameInput = document.getElementById('reg-name').value.trim();
+    const idInput = document.getElementById('reg-id').value.trim();
     
-    updateProfileUI();
-    showScreen('screen-lobby');
+    if (nameInput.length < 2 || idInput.length < 3) return alert("認証失敗: 有効な識別コードを入力せよ。");
+
+    agentProfile = {
+        name: nameInput,
+        protocol: idInput,
+        pts: 0,
+        level: 0
+    };
+
+    await db.collection('users').doc(idInput).set(agentProfile);
+    localStorage.setItem('REVERSE_PROFILE_V35', JSON.stringify(agentProfile));
+    
+    refreshHeaderUI();
+    switchView('screen-lobby');
 };
 
-function updateProfileUI() {
-    document.getElementById('display-name').innerText = agent.name;
-    document.getElementById('display-protocol').innerText = `PROTOCOL-ID: [ ${agent.protocol} ]`;
-    document.getElementById('display-rank').innerText = RANK_NAMES[agent.level];
-    document.getElementById('display-pt').innerText = agent.pts;
-    document.getElementById('xp-fill').style.width = agent.pts + "%";
+document.getElementById('btn-edit-account').onclick = () => switchView('screen-auth');
+
+function refreshHeaderUI() {
+    document.getElementById('display-name').innerText = agentProfile.name;
+    const rankLabel = RANK_NAMES[agentProfile.level];
+    document.getElementById('display-rank').innerText = rankLabel;
+    document.getElementById('display-pt').innerText = agentProfile.pts;
+    document.getElementById('xp-fill-active').style.width = agentProfile.pts + "%";
 }
 
-// --- 2. マッチングシステム ---
+// --- 3. [マッチングロジック] ---
 
-// ロビー右側のシグナル一覧表示
-function listenToNetworkSignals() {
+function initSignalLog() {
+    // 待機中のルームをスキャン
     db.collection('rooms').where('status', '==', 'waiting').limit(10).onSnapshot(qs => {
-        const list = document.getElementById('room-status-list');
-        list.innerHTML = "";
+        const logArea = document.getElementById('room-status-list');
+        if(qs.empty) {
+            logArea.innerHTML = '<div class="placeholder-log">NO SIGNALS DETECTED.</div>';
+            return;
+        }
+        logArea.innerHTML = "";
         qs.forEach(doc => {
             const data = doc.data();
-            list.innerHTML += `
-                <div class="room-node">
-                    <div class="node-info">ID: ${doc.id} / HOST: ${data.p1.name}</div>
-                    <button class="join-btn" onclick="manualJoin('${doc.id}')" style="cursor:pointer; color:var(--neon-blue); background:none; border:1px solid;">ACCESS</button>
-                </div>`;
+            const node = document.createElement('div');
+            node.className = 'room-node';
+            node.innerHTML = `
+                <div class="node-info">ADDR: ${doc.id} / HOST: ${data.p1.name} [${data.p1.rank}]</div>
+                <button onclick="quickSelectId('${doc.id}')" style="background:none; color:cyan; border:1px solid; cursor:pointer;">CONNECT</button>
+            `;
+            logArea.appendChild(node);
         });
     });
 }
 
-function manualJoin(id) { document.getElementById('custom-room-id').value = id; }
+function quickSelectId(id) {
+    document.getElementById('custom-room-id').value = id;
+}
 
-// ルームキー入力入室
-document.getElementById('btn-room-enter').onclick = () => {
-    const id = document.getElementById('custom-room-id').value.trim();
-    const allowAuto = document.querySelector('input[name="auto-allow"]:checked').value === "true";
-    if (id.length < 3) return alert("IDが短すぎます");
-    enterRoom(id, allowAuto);
-};
-
-// クイックマッチ (空いている自動許可ルームを探す)
+// 自動マッチ
 document.getElementById('btn-auto-match').onclick = async () => {
-    const btn = document.getElementById('btn-auto-match');
-    btn.innerText = "SIGNAL SCANNING...";
+    const searchBtn = document.getElementById('btn-auto-match');
+    searchBtn.innerText = "LINKING TO RANDOM NODE...";
     
     const snap = await db.collection('rooms')
         .where('status', '==', 'waiting')
-        .where('allowAuto', '==', true)
+        .where('autoAllow', '==', true)
         .limit(1).get();
 
     if (snap.empty) {
-        // 見つからなければ新しくルームを作成
-        const rid = "R-" + Math.floor(1000 + Math.random() * 9000);
-        enterRoom(rid, true);
+        createAndEnterRoom("Q-" + Math.floor(1000 + Math.random() * 8999), true);
     } else {
-        enterRoom(snap.docs[0].id, true);
+        createAndEnterRoom(snap.docs[0].id, true);
     }
 };
 
-async function enterRoom(id, allowAuto) {
-    roomId = id;
-    const roomRef = db.collection('rooms').doc(id);
+// 特定ルーム接続
+document.getElementById('btn-room-enter').onclick = () => {
+    const rId = document.getElementById('custom-room-id').value.trim();
+    const isAllowAuto = document.querySelector('input[name="auto-allow"]:checked').value === "true";
+    if (!rId) return alert("ルームIDを入力してください。");
+    createAndEnterRoom(rId, isAllowAuto);
+};
+
+async function createAndEnterRoom(rId, autoFlag) {
+    currentRoomId = rId;
+    const roomRef = db.collection('rooms').doc(rId);
     const doc = await roomRef.get();
 
     if (!doc.exists) {
-        myId = "p1"; // 先攻・ホスト（丸）
+        myRole = "p1"; // 先攻・丸
         await roomRef.set({
             status: "waiting",
-            allowAuto: allowAuto,
-            attacker: "p1", // 最初はP1が予測番
+            autoAllow: autoFlag,
+            attacker: "p1", // 最初はP1(下からスタート)が予測者
             turn: 1,
-            p1: { name: agent.name, rank: RANK_NAMES[agent.level], hp: 5, pos: 32, ready: false, choice: -1 }, // 下段中央寄り
-            p2: { name: "...", rank: "-", hp: 5, pos: 3, ready: false, choice: -1 } // 上段中央寄り
+            lastResultBanner: "",
+            p1: { name: agentProfile.name, protocol: agentProfile.protocol, rank: RANK_NAMES[agentProfile.level], hp: 5, pos: 32, ready: false, choice: -1 }, // 下段
+            p2: { name: "PENDING...", protocol: "", rank: "--", hp: 5, pos: 3, ready: false, choice: -1 } // 上段
         });
     } else {
-        myId = "p2"; // 後攻（三角）
+        myRole = "p2"; // 後攻・三角
         await roomRef.update({
             status: "playing",
-            p2: { name: agent.name, rank: RANK_NAMES[agent.level], hp: 5, pos: 3, ready: false, choice: -1 }
+            p2: { name: agentProfile.name, protocol: agentProfile.protocol, rank: RANK_NAMES[agentProfile.level], hp: 5, pos: 3, ready: false, choice: -1 }
         });
     }
 
-    roomRef.onSnapshot(s => gameCycle(s.data()));
-}
-
-// --- 3. ゲームサイクルロジック ---
-
-function gameCycle(data) {
-    if (!data || data.status === "waiting") return;
-    roomData = data;
-    alreadyProcessedResult = false;
-    showScreen('screen-game');
-
-    const enemyId = (myId === "p1") ? "p2" : "p1";
-    const me = data[myId];
-    const em = data[enemyId];
-
-    // HUD更新
-    document.getElementById('enemy-name').innerText = em.name;
-    document.getElementById('enemy-rank').innerText = em.rank;
-    document.getElementById('hp-bar-enemy').style.width = (em.hp * 20) + "%";
-    document.getElementById('my-name').innerText = me.name;
-    document.getElementById('my-rank').innerText = me.rank;
-    document.getElementById('hp-bar-mine').style.width = (me.hp * 20) + "%";
-    document.getElementById('round-indicator').innerText = `TURN ${data.turn}`;
-
-    // 攻守判定
-    const isAttacker = (data.attacker === myId);
-    document.getElementById('current-phase').innerText = isAttacker ? "EXECUTE: ATTACK" : "EVADE: DEFENSE";
-    document.getElementById('instr-message').innerText = isAttacker 
-        ? "ターゲットの回避先を特定し、選択せよ。" 
-        : "敵機の予測範囲外へ退避せよ。最上段/最下段へ到達で勝利。";
-
-    renderGrid(data, isAttacker);
-
-    // タイマー管理 (自分がまだ選択していない時だけ開始)
-    if (!me.ready) {
-        startCombatTimer();
-    } else {
-        clearInterval(timerInt);
-        document.getElementById('btn-lockin').innerText = "DATA UPLOADING...";
-    }
-
-    // ホスト(P1)による判定処理
-    if (data.p1.ready && data.p2.ready && myId === "p1") {
-        setTimeout(() => resolveBattlePhase(data), 1200);
-    }
-
-    // 勝敗チェック
-    checkWinCondition(data);
-}
-
-// 判定ロジック
-async function resolveBattlePhase(data) {
-    let p1hp = data.p1.hp; let p2hp = data.p2.hp;
-    let p1pos = data.p1.pos; let p2pos = data.p2.pos;
-    let bannerType = "";
-
-    const attacker = data.attacker;
-    const defender = (attacker === "p1") ? "p2" : "p1";
-
-    // 的中判定 (予測した場所と移動先が一致)
-    if (data[attacker].choice === data[defender].choice) {
-        if (defender === "p1") p1hp--; else p2hp--;
-        bannerType = "CRITICAL_HIT!!";
-    } else {
-        bannerType = "MISS / ESCAPED";
-    }
-
-    // ポジション確定（逃げている側の位置を移動させる）
-    if (attacker === "p1") p2pos = data.p2.choice; else p1pos = data.p1.choice;
-
-    selectedIdx = -1;
-    await db.collection('rooms').doc(roomId).update({
-        "p1.hp": p1hp, "p1.pos": p1pos, "p1.ready": false, "p1.choice": -1,
-        "p2.hp": p2hp, "p2.pos": p2pos, "p2.ready": false, "p2.choice": -1,
-        attacker: (attacker === "p1" ? "p2" : "p1"), // 攻守交替
-        turn: data.turn + 1,
-        lastBanner: bannerType // 演出用
+    roomRef.onSnapshot(snapshot => {
+        const data = snapshot.data();
+        if(!data) return;
+        currentRoomData = data;
+        processBattleState(data);
     });
 }
 
-// --- 4. 勝利条件・演出 ---
+// --- 4. [メインバトルサイクル] ---
 
-function checkWinCondition(data) {
-    let winner = null;
-    // HP ゼロ
-    if (data.p1.hp <= 0) winner = "p2";
-    if (data.p2.hp <= 0) winner = "p1";
-    // 陣地到達 (P1は一番上[0-5]へ、P2は一番下[30-35]へ)
-    if (data.p1.pos <= 5) winner = "p1";
-    if (data.p2.pos >= 30) winner = "p2";
+function processBattleState(data) {
+    if (data.status === "playing") {
+        isResultProcessed = false;
+        switchView('screen-game');
+        syncUI(data);
 
-    if (winner && !alreadyProcessedResult) {
-        endGame(winner);
-    }
-    
-    // バナー演出
-    if (data.lastBanner) {
-        triggerBanner(data.lastBanner);
+        const me = data[myRole];
+        if (!me.ready) {
+            startTimer();
+        } else {
+            clearInterval(battleTimerInt);
+            document.getElementById('btn-lockin').innerText = "DATA SYNC...";
+        }
+
+        // バナー演出 (的中成功！など)
+        if (data.lastResultBanner) {
+            showBigBanner(data.lastResultBanner);
+        }
+
+        // ホスト(P1)が判定を実行
+        if (data.p1.ready && data.p2.ready && myRole === "p1") {
+            setTimeout(() => calculatePhaseResult(data), 1000);
+        }
+        
+        // 勝敗判定
+        checkFinalWin(data);
     }
 }
 
-async function endGame(winner) {
-    alreadyProcessedResult = true;
-    const isWin = (myId === winner);
-    
-    // XP計算
-    let diff = -10; // 敗北は一律-10
-    if (isWin) {
-        diff = Math.max(20, 45 - roomData.turn); // ターン数が短いほど高得点
-    }
-    
-    agent.pts += diff;
-    // ランク昇降
-    if (agent.pts >= 100) { if (agent.level < 9) { agent.level++; agent.pts = 0; } else { agent.pts = 100; } }
-    if (agent.pts < 0) { if (agent.level > 0) { agent.level--; agent.pts = 90; } else { agent.pts = 0; } }
+function syncUI(data) {
+    const enemyKey = (myRole === "p1") ? "p2" : "p1";
+    const em = data[enemyKey];
+    const me = data[myRole];
 
-    await db.collection('users').doc(agent.protocol).set(agent);
-    localStorage.setItem('REVERSE_PROFILE', JSON.stringify(agent));
+    // HUD (敵情報：上)
+    document.getElementById('enemy-name').innerText = em.name;
+    document.getElementById('enemy-rank-big').innerText = em.rank;
+    document.getElementById('hp-bar-enemy').style.width = (em.hp * 20) + "%";
+    document.getElementById('enemy-hp-txt').innerText = (em.hp * 20) + "%";
 
-    showFinalOverlay(isWin);
+    // HUD (自分情報：下)
+    document.getElementById('my-name').innerText = me.name;
+    document.getElementById('my-rank-big').innerText = me.rank;
+    document.getElementById('hp-bar-mine').style.width = (me.hp * 20) + "%";
+    document.getElementById('my-hp-txt').innerText = (me.hp * 20) + "%";
+
+    document.getElementById('round-indicator').innerText = `TURN: ${String(data.turn).padStart(2, '0')}`;
+
+    const amIAttacking = (data.attacker === myId);
+    const tag = document.getElementById('phase-tag');
+    tag.innerText = amIAttacking ? "ATTACKER" : "EVADER";
+    tag.style.background = amIAttacking ? "var(--p2-neon)" : "var(--p1-neon)";
+    
+    document.getElementById('instr-message').innerText = amIAttacking
+        ? "> TARGETの予測位置を指定せよ。"
+        : "> 移動して予測攻撃を回避せよ。端への到達は「勝ち」だ。";
+
+    drawBoard(data);
 }
 
-// --- 5. UI/盤面描画用補助 ---
+// 判定ロジック
+async function calculatePhaseResult(data) {
+    let p1hp = data.p1.hp; let p2hp = data.p2.hp;
+    let p1pos = data.p1.pos; let p2pos = data.p2.pos;
+    let bannerTxt = "";
 
-function renderGrid(data, isAttacker) {
+    const attackerKey = data.attacker;
+    const defenderKey = (attackerKey === "p1") ? "p2" : "p1";
+
+    // 当たり判定
+    if (data[attackerKey].choice === data[defenderKey].choice) {
+        if (defenderKey === "p1") p1hp--; else p2hp--;
+        bannerTxt = ">>> CRITICAL_HIT!! <<<";
+    } else {
+        bannerTxt = ">>> TARGET_ESCAPED <<<";
+    }
+
+    // 移動後のポジション確定
+    if (attackerKey === "p1") p2pos = data.p2.choice; 
+    else p1pos = data.p1.choice;
+
+    await db.collection('rooms').doc(currentRoomId).update({
+        'p1.hp': p1hp, 'p1.pos': p1pos, 'p1.ready': false, 'p1.choice': -1,
+        'p2.hp': p2hp, 'p2.pos': p2pos, 'p2.ready': false, 'p2.choice': -1,
+        attacker: (attackerKey === "p1" ? "p2" : "p1"),
+        turn: data.turn + 1,
+        lastResultBanner: bannerTxt
+    });
+    
+    selectedIdx = -1;
+}
+
+// --- 5. [盤面制御 & ヘルパー] ---
+
+function initGridBoard() {
     const board = document.getElementById('board-6x6');
     board.innerHTML = "";
-    const me = data[myId];
-    const adj = getAdj(me.pos);
-
-    for (let i = 0; i < 36; i++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        if (i < 6) cell.classList.add('home-enemy'); // 上端は敵陣
-        if (i > 29) cell.classList.add('home-mine'); // 下端は自陣
-        
-        // P1=Round, P2=Triangle (固定表示)
-        if (i === data.p1.pos) cell.innerHTML = '<div class="round-p1"></div>';
-        if (i === data.p2.pos) cell.innerHTML = '<div class="triangle-p2"></div>';
-
-        if (!me.ready) {
-            if (isAttacker) cell.classList.add('can-pred');
-            else if (adj.includes(i)) cell.classList.add('can-move');
-
-            cell.onclick = () => {
-                if (!isAttacker && !adj.includes(i)) return;
-                selectedIdx = i;
-                renderSelection(i);
-            };
-        }
-        board.appendChild(cell);
+    for(let i=0; i<36; i++) {
+        const c = document.createElement('div');
+        c.className = 'cell';
+        if(i < 6) c.classList.add('goal-zone-p2'); // P2(三角)のゴール地点
+        if(i > 29) c.classList.add('goal-zone-p1'); // P1(丸)のゴール地点
+        c.id = `cell-${i}`;
+        board.appendChild(c);
     }
 }
 
-function renderSelection(idx) {
+function drawBoard(data) {
     const cells = document.querySelectorAll('.cell');
-    cells.forEach(c => c.classList.remove('active'));
-    cells[idx].classList.add('active');
+    cells.forEach(c => { c.innerHTML = ""; c.className = "cell"; });
+    
+    const myPos = data[myRole].pos;
+    const adj = getNeighbors(myPos);
+    const amIAttacker = (data.attacker === myRole);
+
+    // 駒配置
+    document.getElementById(`cell-${data.p1.pos}`).innerHTML = '<div class="round-token"></div>';
+    document.getElementById(`cell-${data.p2.pos}`).innerHTML = '<div class="triangle-token"></div>';
+
+    // 陣地着色（背景復活）
+    for(let i=0; i<36; i++) {
+        if(i < 6) document.getElementById(`cell-${i}`).classList.add('goal-zone-p2');
+        if(i > 29) document.getElementById(`cell-${i}`).classList.add('goal-zone-p1');
+        
+        // 選択肢ハイライト
+        if (!data[myRole].ready) {
+            if(amIAttacker) document.getElementById(`cell-${i}`).classList.add('can-pred');
+            else if(adj.includes(i)) document.getElementById(`cell-${i}`).classList.add('can-move');
+            
+            document.getElementById(`cell-${i}`).onclick = () => {
+                if(!amIAttacker && !adj.includes(i)) return;
+                selectTile(i);
+            };
+        }
+    }
+    
+    if (selectedIdx !== -1) {
+        document.getElementById(`cell-${selectedIdx}`).classList.add('active');
+    }
+}
+
+function selectTile(idx) {
+    selectedIdx = idx;
+    const all = document.querySelectorAll('.cell');
+    all.forEach(c => c.classList.remove('active'));
+    document.getElementById(`cell-${idx}`).classList.add('active');
     document.getElementById('btn-lockin').disabled = false;
-    document.getElementById('btn-lockin').innerText = "LOCK_AND_LOAD";
 }
 
 document.getElementById('btn-lockin').onclick = async () => {
-    if (selectedIdx === -1) return;
-    clearInterval(timerInt);
-    await db.collection('rooms').doc(roomId).update({ [`${myId}.ready`]: true, [`${myId}.choice`]: selectedIdx });
+    if(selectedIdx === -1) return;
+    await db.collection('rooms').doc(currentRoomId).update({
+        [`${myRole}.choice`]: selectedIdx,
+        [`${myRole}.ready`]: true
+    });
 };
 
-// 10秒セグメントタイマー
-function startCombatTimer() {
-    let s = 10;
-    const segs = document.getElementById('timer-segments');
-    segs.innerHTML = "";
-    for(let i=0; i<10; i++) segs.innerHTML += `<div class="timer-seg active"></div>`;
-    document.getElementById('sec-num').innerText = s;
+function startTimer() {
+    let timeLeft = 10;
+    const stack = document.getElementById('timer-segments');
+    stack.innerHTML = "";
+    for(let i=0; i<10; i++) stack.innerHTML += '<div class="timer-seg lit"></div>';
 
-    clearInterval(timerInt);
-    timerInt = setInterval(() => {
-        s--;
-        document.getElementById('sec-num').innerText = s;
-        const allSegs = document.querySelectorAll('.timer-seg');
-        if (allSegs[s]) allSegs[s].classList.remove('active');
-        if (s <= 0) {
-            clearInterval(timerInt);
-            autoSelectAction();
+    clearInterval(battleTimerInt);
+    battleTimerInt = setInterval(() => {
+        timeLeft--;
+        document.getElementById('sec-num').innerText = timeLeft;
+        const segs = document.querySelectorAll('.timer-seg');
+        if(segs[timeLeft]) segs[timeLeft].classList.remove('lit');
+        
+        if(timeLeft <= 0) {
+            clearInterval(battleTimerInt);
+            // 強制決定ロジック
+            if (selectedIdx === -1) {
+                const myP = currentRoomData[myRole].pos;
+                selectedIdx = (currentRoomData.attacker === myRole) ? 0 : getNeighbors(myP)[0];
+            }
+            document.getElementById('btn-lockin').click();
         }
     }, 1000);
 }
 
-function autoSelectAction() {
-    // タイムオーバー時の強制決定
-    if (selectedIdx === -1) {
-        selectedIdx = (roomData.attacker === myId) ? Math.floor(Math.random()*36) : getAdj(roomData[myId].pos)[0];
+// --- 6. [勝利判定・ポイント処理] ---
+
+async function checkFinalWin(data) {
+    let winnerKey = null;
+    // 条件1: HP
+    if (data.p1.hp <= 0) winnerKey = "p2";
+    if (data.p2.hp <= 0) winnerKey = "p1";
+    // 条件2: 陣地
+    if (data.p1.pos <= 5) winnerKey = "p1"; // P1は上端(0-5)へ到達で勝ち
+    if (data.p2.pos >= 30) winnerKey = "p2"; // P2は下端(30-35)へ到達で勝ち
+
+    if (winnerKey && !isResultProcessed) {
+        isResultProcessed = true;
+        processWinXP(winnerKey === myRole, data.turn);
     }
-    document.getElementById('btn-lockin').click();
 }
 
-function triggerBanner(text) {
+async function processWinXP(isWin, turnCount) {
+    let diff = -10;
+    if(isWin) {
+        diff = Math.max(25, 50 - turnCount);
+        showBigBanner("OPERATION SUCCESSFUL");
+    } else {
+        showBigBanner("DISCONNECTED / TERMINATED");
+    }
+
+    agentProfile.pts += diff;
+    
+    // ランク処理
+    if(agentProfile.pts >= 100 && agentProfile.level < RANK_NAMES.length-1) {
+        agentProfile.level++; agentProfile.pts -= 100;
+    } else if(agentProfile.pts < 0 && agentProfile.level > 0) {
+        agentProfile.level--; agentProfile.pts += 100;
+    } else if(agentProfile.pts < 0) {
+        agentProfile.pts = 0;
+    }
+
+    await db.collection('users').doc(agentProfile.protocol).set(agentProfile);
+    localStorage.setItem('REVERSE_PROFILE_V35', JSON.stringify(agentProfile));
+    
+    setTimeout(() => location.reload(), 4000);
+}
+
+// --- ユーティリティ ---
+function switchView(id) {
+    document.querySelectorAll('.terminal-view').forEach(v => v.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+}
+
+function showBigBanner(txt) {
     const b = document.getElementById('big-banner');
-    b.innerText = text;
+    b.innerText = txt;
     b.classList.remove('hidden');
     setTimeout(() => b.classList.add('hidden'), 1500);
 }
 
-// 画面遷移
-function showScreen(id) {
-    document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
-    document.getElementById(id).classList.remove('hidden');
-    document.getElementById(id).classList.add('view-transition-anim');
-}
-
-// ヘルパー：隣接マスの計算
-function getAdj(pos) {
+function getNeighbors(pos) {
     const res = [];
     const x = pos % 6, y = Math.floor(pos / 6);
-    if (x > 0) res.push(pos - 1); if (x < 5) res.push(pos + 1);
-    if (y > 0) res.push(pos - 6); if (y < 5) res.push(pos + 6);
+    if(x > 0) res.push(pos - 1); if(x < 5) res.push(pos + 1);
+    if(y > 0) res.push(pos - 6); if(y < 5) res.push(pos + 6);
     return res;
-}
-
-// リザルト画面の生成（簡易）
-function showFinalOverlay(win) {
-    document.getElementById('result-screen').classList.remove('hidden');
-    document.getElementById('res-status-title').innerText = win ? "MISSION COMPLETE" : "DISCONNECTED";
-    document.getElementById('res-status-title').style.color = win ? "var(--neon-blue)" : "var(--neon-red)";
 }
