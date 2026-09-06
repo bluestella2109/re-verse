@@ -3,164 +3,203 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RE:VERSE // AGENT TERMINAL v3.0</title>
-    <!-- 軍事フォント: Share Tech Mono, 日本語: Noto Sans JP -->
+    <title>RE:VERSE // PROJECT-AI ELITE v3.5</title>
+    <!-- 軍用デジタルフォント & 日本語強強調フォント -->
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@400;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="crt-filter">
-    <!-- サイバー視覚エフェクトレイヤー -->
+    <!-- UI背景：走査線、ノイズ、ヴィネット -->
     <div class="vignette"></div>
     <div class="scanlines"></div>
-    <div class="noise"></div>
+    <div class="noise-fx"></div>
+    <div class="digital-grid-bg"></div>
 
     <div id="terminal-container">
-        <!-- プロフィールヘッダー (常時表示) -->
-        <header class="account-header">
-            <div class="profile-stats">
-                <div class="rank-badge" id="display-rank">---</div>
-                <div class="name-id">
-                    <span id="display-name">ANALYZING USER...</span>
-                    <span id="display-protocol" class="sub-text">PROTOCOL-ID: [ NULL ]</span>
+        <!-- 【常時ヘッダー】 ランクの巨大化とアカウントステータス -->
+        <header class="master-header">
+            <div class="header-rank-box">
+                <span class="label-mini">ELITE_SYSTEM_RANK</span>
+                <span id="display-rank" class="rank-super-value">C-</span>
+            </div>
+            
+            <div class="header-profile-box">
+                <div class="name-area">
+                    <span class="prefix">IDENT:</span>
+                    <span id="display-name" class="glitch-txt-short">--ANALYST--</span>
+                </div>
+                <div class="xp-gauge-module">
+                    <div class="xp-labels">
+                        <span id="display-pt">0</span> / 100 PT
+                    </div>
+                    <div class="xp-track-base"><div id="xp-fill-active"></div></div>
                 </div>
             </div>
-            <div class="xp-bar-wrap">
-                <div class="xp-info">EXP GAIN: <span id="display-pt">0</span> / 100 PT</div>
-                <div class="xp-track"><div id="xp-fill"></div></div>
-            </div>
-            <button id="btn-edit-profile" class="edit-link">PROF_EDIT</button>
+
+            <button id="btn-edit-account" class="header-sub-btn">EDIT_PROF</button>
         </header>
 
-        <main id="main-viewport">
-            
-            <!-- 【画面A：アカウント作成 / プロフィール編集】 -->
-            <section id="screen-auth" class="view">
-                <div class="auth-module">
-                    <div class="module-title">AGENT IDENTIFICATION</div>
-                    <h2 class="glitch-text" data-text="REGISTRATION">REGISTRATION</h2>
-                    <div class="form-body">
-                        <div class="field">
-                            <label>AGENT NAME / 識別名 (12文字以内)</label>
-                            <input type="text" id="reg-name" placeholder="Agent_Unknown" maxlength="12">
+        <!-- 【メイン・ビュー・コントローラー】 -->
+        <main id="main-view-stack">
+
+            <!-- SCREEN 0: アカウント認証・作成画面 -->
+            <section id="screen-auth" class="terminal-view">
+                <div class="auth-center-frame">
+                    <div class="frame-decor"><span></span><span></span></div>
+                    <div class="auth-header">
+                        <h2 class="glitch-text" data-text="IDENTITY_AUTH">IDENTITY_AUTH</h2>
+                        <p class="sub-log">データベースへ永続的なアクセスキーを生成します。</p>
+                    </div>
+
+                    <div class="cyber-form-container">
+                        <!-- スタイリッシュ入力欄 1 -->
+                        <div class="cyber-input-wrapper">
+                            <label>IDENTIFIER_NAME [エージェント名]</label>
+                            <div class="input-glow-box">
+                                <input type="text" id="reg-name" placeholder=">> 未入力" maxlength="12" autocomplete="off">
+                                <div class="focus-line"></div>
+                            </div>
                         </div>
-                        <div class="field">
-                            <label>PROTOCOL ID / 管理コード (8文字以内・一律不変)</label>
-                            <input type="text" id="reg-id" placeholder="8-Alpha" maxlength="8">
+
+                        <!-- スタイリッシュ入力欄 2 -->
+                        <div class="cyber-input-wrapper">
+                            <label>PROTOCOL_CODE [識別ID]</label>
+                            <div class="input-glow-box">
+                                <input type="text" id="reg-id" placeholder=">> X0-SYSTEM" maxlength="8" autocomplete="off">
+                                <div class="focus-line"></div>
+                            </div>
                         </div>
-                        <p class="form-desc">※データは軍事プロトコルとして永続的にアーカイブされます。</p>
-                        <button id="btn-auth-save" class="execute-btn wide">AUTHENTICATE & LOGON</button>
+
+                        <button id="btn-auth-save" class="execute-btn-main">
+                            <span class="btn-scan-line"></span>
+                            AUTHENTICATE_CONNECT
+                        </button>
                     </div>
                 </div>
             </section>
 
-            <!-- 【画面B：タクティカルロビー (二分割＋右ログ)】 -->
-            <section id="screen-lobby" class="view hidden">
-                <div class="lobby-grid">
-                    <!-- 左カラム：マッチング選択 (上下分割) -->
-                    <div class="match-controller">
-                        
-                        <!-- 上段：自動クイックマッチング -->
-                        <div class="match-pane auto-pane">
-                            <h3 class="pane-tag">▶ QUICK MATCHING</h3>
-                            <div class="pane-desc">空いているセッションへ即時接続します。</div>
-                            <div class="searching-visual">
-                                <div class="pulse-ring"></div>
-                                <span>SCANNING...</span>
+            <!-- SCREEN 1: ロビー・マッチング選択（上下二分割） -->
+            <section id="screen-lobby" class="terminal-view hidden">
+                <div class="lobby-mega-layout">
+                    <!-- 左カラム：マッチング制御 -->
+                    <div class="matching-hub">
+                        <!-- 上段：クイックマッチ -->
+                        <div class="pane-box auto-matching">
+                            <div class="pane-indicator">METHOD_01</div>
+                            <h3 class="pane-title">QUICK_ENGAGE / 自動交戦スキャン</h3>
+                            <div class="radar-visual">
+                                <div class="radar-circle"></div>
+                                <div class="radar-line"></div>
                             </div>
-                            <button id="btn-auto-match" class="neon-button">SEARCHING FOR TARGET</button>
+                            <p class="pane-detail">開放されたネットワーク内の対象を自動索敵します。</p>
+                            <button id="btn-auto-match" class="lobby-action-btn blue-neon">INITIALIZE_SCANNING</button>
                         </div>
 
-                        <!-- 下段：カスタムルームエントリー -->
-                        <div class="match-pane private-pane">
-                            <h3 class="pane-tag">▶ PRIVATE ACCESS</h3>
-                            <div class="room-form">
-                                <input type="text" id="custom-room-id" placeholder="ENTER ROOM-ID (5文字)" maxlength="5">
-                                <div class="permission-options">
-                                    <label class="radio-label">
-                                        <input type="radio" name="auto-allow" value="true" checked>
-                                        <span>AUTO-MATCHによる乱入を許可</span>
-                                    </label>
-                                    <label class="radio-label">
-                                        <input type="radio" name="auto-allow" value="false">
-                                        <span>完全プライベート(手動入力のみ)</span>
-                                    </label>
+                        <!-- 下段：ルームエントリー -->
+                        <div class="pane-box private-matching">
+                            <div class="pane-indicator">METHOD_02</div>
+                            <h3 class="pane-title">PRIVATE_ACCESS / 手動ノード接続</h3>
+                            <div class="private-entry-ui">
+                                <input type="text" id="custom-room-id" class="input-id-short" placeholder="ROOM_ID" maxlength="5">
+                                
+                                <div class="permission-selection">
+                                    <div class="radio-cell">
+                                        <input type="radio" id="allow-true" name="auto-allow" value="true" checked>
+                                        <label for="allow-true">乱入を許可する（Public）</label>
+                                    </div>
+                                    <div class="radio-cell">
+                                        <input type="radio" id="allow-false" name="auto-allow" value="false">
+                                        <label for="allow-false">入室を制限する（Private）</label>
+                                    </div>
                                 </div>
-                                <button id="btn-room-enter" class="neon-button sub">SESSION START</button>
+                                
+                                <button id="btn-room-enter" class="lobby-action-btn red-neon">CONNECT_SPECIFIC_ID</button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 右カラム：ネットワーク信号表 -->
-                    <div class="network-log-panel">
-                        <div class="panel-header">ACTIVE SIGNAL LOG</div>
-                        <div id="room-status-list" class="log-scroll-area">
-                            <!-- JSで信号表生成 -->
+                    <!-- 右カラム：リアルタイム信号監視ログ -->
+                    <div class="signal-tracker-sidebar">
+                        <div class="sidebar-tag">LIVE_SIGNALS</div>
+                        <div id="room-status-list" class="signal-scroller">
+                            <div class="placeholder-log">SCANNING CHANNELS...</div>
                         </div>
+                        <div class="sidebar-footer">DB_SYNC_ACTIVE</div>
                     </div>
                 </div>
             </section>
 
-            <!-- 【画面C：タクティカル・バトルアリーナ】 -->
-            <section id="screen-game" class="view hidden">
-                
-                <!-- [ターゲットHP：盤面の上] -->
-                <div class="game-hud enemy-side">
-                    <div class="user-block">
-                        <span class="rank-tag" id="enemy-rank">C-</span>
-                        <span class="id-tag" id="enemy-name">TARGET_NAME</span>
+            <!-- SCREEN 2: バトルアリーナ 6x6 -->
+            <section id="screen-game" class="terminal-view hidden">
+                <!-- 敵側：画面最上部 -->
+                <div class="hud-top-bar">
+                    <div class="target-profile">
+                        <div class="rank-side-mega" id="enemy-rank-big">C-</div>
+                        <div class="meta-side">
+                            <span class="label">TARGET_OPERATOR</span>
+                            <span id="enemy-name" class="name-display">UNKNOWN_AI</span>
+                        </div>
                     </div>
-                    <div class="hp-gauge enemy"><div id="hp-bar-enemy" class="hp-fill"></div></div>
+                    <div class="integrity-gauge enemy-type">
+                        <div class="gauge-container"><div id="hp-bar-enemy" class="gauge-fill"></div></div>
+                        <div class="gauge-label">TARGET_INTEGRITY <span id="enemy-hp-txt">100%</span></div>
+                    </div>
                 </div>
 
-                <div class="combat-core">
+                <!-- 戦闘コア中央エリア -->
+                <div class="combat-focus-area">
                     <!-- 左：セグメント式タイマー -->
-                    <div class="timer-column">
-                        <div class="seg-wrap" id="timer-segments">
-                            <!-- JSで生成 -->
+                    <div class="timer-side-panel">
+                        <div class="segment-stack" id="timer-segments"></div>
+                        <div class="time-label"><span id="sec-num">10</span>s</div>
+                    </div>
+
+                    <!-- 中央：6x6 グリッド盤面 -->
+                    <div class="arena-master-frame">
+                        <div class="bezel-label tl">S_COORD // 0x6</div>
+                        <div id="board-6x6" class="grid-layout-6x6"></div>
+                        <div class="bezel-label br">BOUNDARY_SAFE</div>
+                    </div>
+
+                    <!-- 右：モニター指示書 -->
+                    <div class="instruction-aside">
+                        <div class="instr-header">PHASE_INFO</div>
+                        <div id="phase-tag" class="tag-box-glow">READY</div>
+                        <div class="terminal-instr-output">
+                            <p id="instr-message">システムメッセージ：戦場を解析中...</p>
                         </div>
-                        <div class="sec-text"><span id="sec-num">10</span>s</div>
-                    </div>
-
-                    <!-- 中央：6x6 盤面 -->
-                    <div class="arena-board">
-                        <div id="board-6x6" class="grid-6x6"></div>
-                    </div>
-
-                    <!-- 右：指令/指示書 -->
-                    <div class="status-monitor">
-                        <div id="current-phase" class="phase-indicator">LOADING...</div>
-                        <div id="instr-message" class="monitor-text">ANALYZING BATTLEFIELD...</div>
-                        <div id="round-indicator" class="round-display">TURN 01</div>
+                        <div id="round-indicator" class="turn-counter">TURN: 01</div>
                     </div>
                 </div>
 
-                <!-- [バナー演出：的中！などのポップアップ] -->
-                <div id="big-banner" class="announcement hidden">EXECUTION_SUCCESS</div>
-
-                <!-- [自機HP：盤面の下] -->
-                <div class="game-hud my-side">
-                    <div class="hp-gauge mine"><div id="hp-bar-mine" class="hp-fill"></div></div>
-                    <div class="hud-footer">
-                        <div class="user-block">
-                            <span class="rank-tag" id="my-rank">C-</span>
-                            <span class="id-tag" id="my-name">PLAYER_NAME</span>
+                <!-- 自分側：画面最下部 -->
+                <div class="hud-bottom-bar">
+                    <div class="integrity-gauge mine-type">
+                        <div class="gauge-label">OWN_INTEGRITY <span id="my-hp-txt">100%</span></div>
+                        <div class="gauge-container"><div id="hp-bar-mine" class="gauge-fill"></div></div>
+                    </div>
+                    <div class="user-profile-row">
+                        <div class="profile-meta-mega">
+                            <div class="rank-side-mega" id="my-rank-big">C-</div>
+                            <div class="name-side">
+                                <span id="my-name" class="name-display">AGENT_YOU</span>
+                                <span class="label">MY_ID_PROTOCOL</span>
+                            </div>
                         </div>
-                        <button id="btn-lockin" class="lockin-btn" disabled>ACTION_CONFIRM</button>
+                        <button id="btn-lockin" class="confirm-execute-btn" disabled>ACTION_EXECUTE</button>
                     </div>
                 </div>
             </section>
 
         </main>
-        
-        <!-- 四隅装飾 -->
-        <div class="corner tl"></div><div class="corner tr"></div>
-        <div class="corner bl"></div><div class="corner br"></div>
     </div>
 
-    <!-- Firebase Library -->
+    <!-- 的中成功・回避失敗等の巨大バナー通知用 -->
+    <div id="big-banner" class="battle-alert-popup hidden">COMMAND_EXECUTED</div>
+
+    <!-- Firebase JS (AppCompat) -->
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore-compat.js"></script>
-    <!-- メインロジック -->
     <script src="script.js"></script>
 </body>
 </html>
