@@ -4,139 +4,138 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RE:VERSE // PROJECT-AI TERMINAL SYSTEM</title>
-    <!-- サイバーパンク系フォントの読み込み -->
+    <!-- フォント: Share Tech Mono(英語), Noto Sans JP(日本語) -->
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@400;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="crt-filter">
-    <!-- 背景のエフェクトレイヤー -->
+    <!-- 背景演出レイヤー -->
     <div class="vignette"></div>
     <div class="scanlines"></div>
     <div class="noise"></div>
 
     <div id="terminal-container">
-        <!-- 画面上部のステータスバー -->
-        <header class="system-header">
-            <div class="header-left">
-                <span class="glitch-text" data-text="RE:VERSE">RE:VERSE</span>
-                <span class="system-status">CORE: ACTIVE</span>
-            </div>
-            <div class="header-right">
-                <div id="room-display">CONNECTING...</div>
-                <div id="clock">TERMINAL-ID: 808-X</div>
-            </div>
+        <!-- 0. システムヘッダー -->
+        <header class="sys-header">
+            <div class="sys-logo">SYSTEM: RE:VERSE // VER 2.0</div>
+            <div class="sys-id" id="display-name">ID: UNKNOWN_USER</div>
         </header>
 
-        <!-- メインコンテンツ -->
-        <main id="view-port">
-            
-            <!-- ロビー画面 -->
+        <!-- メイン画面：ロビーとゲームが切り替わる -->
+        <main id="main-viewport">
+
+            <!-- 1. ログイン/ロビー画面 -->
             <section id="lobby" class="screen">
-                <div class="mission-box">
-                    <h2 class="section-title">▶ ネットワーク接続開始</h2>
-                    <div class="input-area">
-                        <label>ROOM IDを入力せよ</label>
-                        <input type="text" id="room-id" maxlength="5" placeholder="00000" autocomplete="off">
+                <div class="lobby-layout">
+                    <!-- 左パネル：認証フォーム -->
+                    <div class="auth-panel">
+                        <div class="panel-header">認証シーケンス開始</div>
+                        <h1 class="glitch-text" data-text="TERMINAL LOGIN">TERMINAL LOGIN</h1>
+                        
+                        <div class="input-form">
+                            <div class="field">
+                                <label>識別名を入力せよ (USER_NAME)</label>
+                                <input type="text" id="user-name" placeholder="エージェント名" maxlength="12" autocomplete="off">
+                            </div>
+                            <div class="field">
+                                <label>侵入先のROOM_ID (5文字)</label>
+                                <input type="text" id="room-id" placeholder="00000" maxlength="5" autocomplete="off">
+                            </div>
+                            <button id="btn-connect" class="neon-button primary">
+                                <span class="shimmer"></span>
+                                CONNECT_TO_NETWORK
+                            </button>
+                        </div>
                     </div>
-                    <div class="lobby-actions">
-                        <button id="btn-join" class="main-op-btn">
-                            <span class="btn-glitch"></span>
-                            ARENAへの侵入を開始する
-                        </button>
+
+                    <!-- 右パネル：待機ルーム一覧 -->
+                    <div class="sidebar-panel">
+                        <div class="panel-tag">▶ ネットワーク内待機中のセッション</div>
+                        <div id="active-rooms" class="room-list">
+                            <!-- JSでルーム一覧がここに自動挿入されます -->
+                            <div class="loading-status">スキャン中...</div>
+                        </div>
+                        <div class="panel-footer">STATUS: LISTENING...</div>
                     </div>
-                    <p id="lobby-msg" class="blink-text">システム待機中...</p>
                 </div>
             </section>
 
-            <!-- ゲーム対戦画面 -->
+            <!-- 2. ゲームメイン画面 -->
             <section id="game" class="screen hidden">
-                <div class="hud-top">
-                    <div class="p1-stats stats-block">
-                        <div class="user-label">P1 (あなた)</div>
-                        <div class="hp-gauge"><div id="p1-hp-fill" class="hp-fill"></div></div>
-                        <div class="hp-value">CORE-INTEGRITY: <span id="p1-hp-text">100%</span></div>
+                <!-- 【敵機ステータス (盤面より上)】 -->
+                <div class="hud-top-enemy">
+                    <div class="target-label">TARGET : [ <span id="p2-name-label">ENEMY_AI</span> ]</div>
+                    <div class="hp-container enemy">
+                        <div id="p2-hp-fill" class="hp-bar enemy"></div>
                     </div>
-                    
-                    <div id="turn-info">
-                        <div class="turn-num">SEQ <span id="turn-count">01</span></div>
-                        <div id="timer-bar"><div id="timer-fill"></div></div>
-                    </div>
-
-                    <div class="p2-stats stats-block">
-                        <div class="user-label">P2 (対象敵機)</div>
-                        <div class="hp-gauge"><div id="p2-hp-fill" class="hp-fill"></div></div>
-                        <div class="hp-value">ENEMY-INTEGRITY: <span id="p2-hp-text">100%</span></div>
-                    </div>
+                    <div class="hp-info">敵機整合性: <span id="p2-hp-val">100</span>%</div>
                 </div>
 
-                <div class="arena-layout">
-                    <div class="sidebar-info left">
-                        <div class="log-box">
-                            <div class="log-title">ACTION LOG</div>
-                            <div id="game-logs"></div>
+                <div class="arena-middle">
+                    <!-- フェーズ表示バー -->
+                    <div id="phase-banner" class="phase-alert">ATTACK_PHASE</div>
+                    
+                    <div class="game-arena-layout">
+                        <!-- サイドログ -->
+                        <div class="game-log-panel">
+                            <div class="log-title">ACTION_LOG</div>
+                            <div id="log-content"></div>
                         </div>
-                    </div>
 
-                    <!-- メイングリッド 5x5 -->
-                    <div class="board-wrapper">
-                        <div id="board-grid" class="grid-5x5">
-                            <!-- JSで生成 -->
+                        <!-- 盤面グリッド -->
+                        <div class="board-frame">
+                            <div id="grid-board" class="grid-5x5">
+                                <!-- JSで25マス生成 -->
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="sidebar-info right">
-                        <div class="status-panel">
-                            <div class="status-title">命令指示書</div>
-                            <div id="current-task" class="status-content">
-                                <span class="highlight">STEP 1</span><br>
-                                次の移動先を指定せよ
+                        <!-- 右側ミッション指示 -->
+                        <div class="mission-instruction">
+                            <div class="instr-title">命令指示書</div>
+                            <div id="instr-text">
+                                相手の逃走経路を<br>予測し、対象マスを<br>マークせよ。
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- 画面下部のコントロールエリア -->
-                <div class="control-footer">
-                    <div class="btn-wrap">
-                        <button id="btn-feint" class="sub-op-btn">
-                            <span class="icon">🎭</span> フェイント回路展開 (残り<span id="feint-val">3</span>)
-                        </button>
+                <!-- 【自機ステータス (盤面より下)】 -->
+                <div class="hud-bottom-user">
+                    <div class="my-hp-info">自機整合性: <span id="p1-hp-val">100</span>%</div>
+                    <div class="hp-container user">
+                        <div id="p1-hp-fill" class="hp-bar user"></div>
                     </div>
-                    <div class="btn-wrap">
-                        <button id="btn-submit" class="execute-btn" disabled>
-                            <span class="btn-label">確定・データ送信</span>
-                            <span class="btn-sub-label">CONFIRM EXECUTION</span>
-                        </button>
+                    <div class="user-label-wrap">
+                        <div class="my-label">OPERATOR : [ <span id="p1-name-label">YOU</span> ]</div>
+                        <!-- 操作用確定ボタン -->
+                        <button id="btn-action" class="execute-btn" disabled>ACTION_CONFIRM</button>
                     </div>
                 </div>
             </section>
+
         </main>
 
-        <!-- 四隅のデザイン要素 -->
-        <div class="corner-border tl"></div>
-        <div class="corner-border tr"></div>
-        <div class="corner-border bl"></div>
-        <div class="corner-border br"></div>
+        <!-- コーナーパーツ（装飾） -->
+        <div class="deco tl"></div><div class="deco tr"></div>
+        <div class="deco bl"></div><div class="deco br"></div>
     </div>
 
-    <!-- 勝敗・結果リザルト画面 -->
-    <div id="result-overlay" class="overlay hidden">
-        <div class="result-card">
-            <h1 id="result-status" class="res-win">EXECUTION COMPLETE</h1>
-            <div class="result-details">
-                <div class="res-stat">
-                    <span>RANKING</span>
-                    <span id="res-rank">A</span>
-                </div>
-                <div class="res-message" id="result-desc">敵機の思考パターンの解析に成功しました。</div>
+    <!-- リザルトオーバーレイ -->
+    <div id="result-screen" class="overlay hidden">
+        <div class="result-modal">
+            <div class="res-title" id="res-status-title">OPERATION_FAILED</div>
+            <div class="res-details">
+                コアの再構築が必要です。<br>
+                接続を維持しますか？
             </div>
-            <button onclick="location.reload()" class="main-op-btn">再試行（RETRY）</button>
+            <button onclick="location.reload()" class="neon-button">RETRY_SESSION</button>
         </div>
     </div>
 
-    <!-- Firebase関係のライブラリ（compat版を使用して安定性を確保） -->
+    <!-- Firebase SDK (互換レイヤー) -->
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore-compat.js"></script>
+    <!-- メインプログラム -->
     <script src="script.js"></script>
 </body>
 </html>
