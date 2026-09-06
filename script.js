@@ -23,17 +23,39 @@ let gameState = null;
 let selectedCellIndex = -1;
 
 // --- 初期ロード時 ---
+// script.js の window.onload 部分をこれに差し替えてみてください
 window.onload = () => {
-    // 待機中のルームをリアルタイム監視
+    console.log("System Initialized..."); // 画面が読み込まれたら表示される
+
     listenToRooms();
 
-    // 接続ボタン
-    document.getElementById('btn-connect').onclick = () => {
-        myName = document.getElementById('user-name').value.trim() || "NONAME_" + Math.floor(Math.random()*999);
-        currentRoomId = document.getElementById('room-id').value.trim();
-        if(!currentRoomId) return alert("侵入先のROOM_IDを入力してください");
+    const connectBtn = document.getElementById('btn-connect');
+    
+    if (!connectBtn) {
+        console.error("Error: 'btn-connect' というIDのボタンが見つかりません。HTMLを確認してください。");
+        return;
+    }
+
+    connectBtn.onclick = () => {
+        console.log("Button clicked!"); // ボタンが押されたら表示される
         
-        joinRoom(currentRoomId);
+        myName = document.getElementById('user-name').value.trim();
+        currentRoomId = document.getElementById('room-id').value.trim();
+
+        console.log("Inputs:", myName, currentRoomId);
+
+        if (!currentRoomId) {
+            alert("ROOM_IDを入力してください");
+            return;
+        }
+        
+        // Firebaseの処理に進む
+        try {
+            joinRoom(currentRoomId);
+        } catch (error) {
+            console.error("Firebase connection error:", error);
+            alert("接続エラー: Firebaseの設定が正しいか確認してください。");
+        }
     };
 };
 
