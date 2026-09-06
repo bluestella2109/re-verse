@@ -3,65 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RE:VERSE | Cyber Psychological Game</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+JP:wght@300;700&display=swap" rel="stylesheet">
+    <title>RE:VERSE // PROJECT-AI TERMINAL SYSTEM</title>
+    <!-- サイバーパンク系フォントの読み込み -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+JP:wght@400;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div id="app">
-        <!-- ログイン / ルーム選択画面 -->
-        <div id="lobby" class="screen">
-            <h1 class="glitch-text">RE:VERSE</h1>
-            <p class="subtitle">FUTURE PSYCHOLOGICAL WARFARE</p>
-            <div class="lobby-controls">
-                <input type="text" id="room-id" placeholder="ROOM ID (5桁)" maxlength="5">
-                <button id="btn-join" class="neon-btn">ENTER ARENA</button>
-            </div>
-            <p id="lobby-msg"></p>
-        </div>
+<body class="crt-filter">
+    <!-- 背景のエフェクトレイヤー -->
+    <div class="vignette"></div>
+    <div class="scanlines"></div>
+    <div class="noise"></div>
 
-        <!-- メインゲーム画面 -->
-        <div id="game" class="screen hidden">
-            <div class="hud">
-                <div class="player-info p1">
-                    <span class="label">P1 (YOU)</span>
-                    <div class="hp-bar"><div id="p1-hp-fill" class="fill"></div></div>
-                    <span id="p1-hp-text">HP: 5</span>
+    <div id="terminal-container">
+        <!-- 画面上部のステータスバー -->
+        <header class="system-header">
+            <div class="header-left">
+                <span class="glitch-text" data-text="RE:VERSE">RE:VERSE</span>
+                <span class="system-status">CORE: ACTIVE</span>
+            </div>
+            <div class="header-right">
+                <div id="room-display">CONNECTING...</div>
+                <div id="clock">TERMINAL-ID: 808-X</div>
+            </div>
+        </header>
+
+        <!-- メインコンテンツ -->
+        <main id="view-port">
+            
+            <!-- ロビー画面 -->
+            <section id="lobby" class="screen">
+                <div class="mission-box">
+                    <h2 class="section-title">▶ ネットワーク接続開始</h2>
+                    <div class="input-area">
+                        <label>ROOM IDを入力せよ</label>
+                        <input type="text" id="room-id" maxlength="5" placeholder="00000" autocomplete="off">
+                    </div>
+                    <div class="lobby-actions">
+                        <button id="btn-join" class="main-op-btn">
+                            <span class="btn-glitch"></span>
+                            ARENAへの侵入を開始する
+                        </button>
+                    </div>
+                    <p id="lobby-msg" class="blink-text">システム待機中...</p>
                 </div>
-                <div id="turn-display">TURN 1</div>
-                <div class="player-info p2">
-                    <span class="label">P2 (ENEMY)</span>
-                    <div class="hp-bar"><div id="p2-hp-fill" class="fill"></div></div>
-                    <span id="p2-hp-text">HP: 5</span>
+            </section>
+
+            <!-- ゲーム対戦画面 -->
+            <section id="game" class="screen hidden">
+                <div class="hud-top">
+                    <div class="p1-stats stats-block">
+                        <div class="user-label">P1 (あなた)</div>
+                        <div class="hp-gauge"><div id="p1-hp-fill" class="hp-fill"></div></div>
+                        <div class="hp-value">CORE-INTEGRITY: <span id="p1-hp-text">100%</span></div>
+                    </div>
+                    
+                    <div id="turn-info">
+                        <div class="turn-num">SEQ <span id="turn-count">01</span></div>
+                        <div id="timer-bar"><div id="timer-fill"></div></div>
+                    </div>
+
+                    <div class="p2-stats stats-block">
+                        <div class="user-label">P2 (対象敵機)</div>
+                        <div class="hp-gauge"><div id="p2-hp-fill" class="hp-fill"></div></div>
+                        <div class="hp-value">ENEMY-INTEGRITY: <span id="p2-hp-text">100%</span></div>
+                    </div>
                 </div>
-            </div>
 
-            <div id="timer-bar"><div id="timer-fill"></div></div>
+                <div class="arena-layout">
+                    <div class="sidebar-info left">
+                        <div class="log-box">
+                            <div class="log-title">ACTION LOG</div>
+                            <div id="game-logs"></div>
+                        </div>
+                    </div>
 
-            <div class="game-container">
-                <div id="board" class="grid-5x5"></div>
-            </div>
+                    <!-- メイングリッド 5x5 -->
+                    <div class="board-wrapper">
+                        <div id="board-grid" class="grid-5x5">
+                            <!-- JSで生成 -->
+                        </div>
+                    </div>
 
-            <div class="controls">
-                <div class="status-msg" id="status-msg">SELECT YOUR NEXT MOVE</div>
-                <div class="btn-group">
-                    <button id="btn-feint" class="sub-btn">FEINT (3)</button>
-                    <button id="btn-submit" class="neon-btn-small" disabled>LOCK IN</button>
+                    <div class="sidebar-info right">
+                        <div class="status-panel">
+                            <div class="status-title">命令指示書</div>
+                            <div id="current-task" class="status-content">
+                                <span class="highlight">STEP 1</span><br>
+                                次の移動先を指定せよ
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- リザルト画面 -->
-        <div id="result-overlay" class="overlay hidden">
-            <div class="result-box">
-                <h2 id="result-title">VICTORY</h2>
-                <p id="result-desc"></p>
-                <button onclick="location.reload()" class="neon-btn">REBOOT</button>
+                <!-- 画面下部のコントロールエリア -->
+                <div class="control-footer">
+                    <div class="btn-wrap">
+                        <button id="btn-feint" class="sub-op-btn">
+                            <span class="icon">🎭</span> フェイント回路展開 (残り<span id="feint-val">3</span>)
+                        </button>
+                    </div>
+                    <div class="btn-wrap">
+                        <button id="btn-submit" class="execute-btn" disabled>
+                            <span class="btn-label">確定・データ送信</span>
+                            <span class="btn-sub-label">CONFIRM EXECUTION</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 四隅のデザイン要素 -->
+        <div class="corner-border tl"></div>
+        <div class="corner-border tr"></div>
+        <div class="corner-border bl"></div>
+        <div class="corner-border br"></div>
+    </div>
+
+    <!-- 勝敗・結果リザルト画面 -->
+    <div id="result-overlay" class="overlay hidden">
+        <div class="result-card">
+            <h1 id="result-status" class="res-win">EXECUTION COMPLETE</h1>
+            <div class="result-details">
+                <div class="res-stat">
+                    <span>RANKING</span>
+                    <span id="res-rank">A</span>
+                </div>
+                <div class="res-message" id="result-desc">敵機の思考パターンの解析に成功しました。</div>
             </div>
+            <button onclick="location.reload()" class="main-op-btn">再試行（RETRY）</button>
         </div>
     </div>
 
-    <!-- Firebase SDK -->
+    <!-- Firebase関係のライブラリ（compat版を使用して安定性を確保） -->
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore-compat.js"></script>
     <script src="script.js"></script>
