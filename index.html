@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RE:VERSE | Cyber Psychological Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Noto+Sans+JP:wght@300;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <!-- ログイン / ルーム選択画面 -->
+        <div id="lobby" class="screen">
+            <h1 class="glitch-text">RE:VERSE</h1>
+            <p class="subtitle">FUTURE PSYCHOLOGICAL WARFARE</p>
+            <div class="lobby-controls">
+                <input type="text" id="room-id" placeholder="ROOM ID (5桁)" maxlength="5">
+                <button id="btn-join" class="neon-btn">ENTER ARENA</button>
+            </div>
+            <p id="lobby-msg"></p>
+        </div>
+
+        <!-- メインゲーム画面 -->
+        <div id="game" class="screen hidden">
+            <div class="hud">
+                <div class="player-info p1">
+                    <span class="label">P1 (YOU)</span>
+                    <div class="hp-bar"><div id="p1-hp-fill" class="fill"></div></div>
+                    <span id="p1-hp-text">HP: 5</span>
+                </div>
+                <div id="turn-display">TURN 1</div>
+                <div class="player-info p2">
+                    <span class="label">P2 (ENEMY)</span>
+                    <div class="hp-bar"><div id="p2-hp-fill" class="fill"></div></div>
+                    <span id="p2-hp-text">HP: 5</span>
+                </div>
+            </div>
+
+            <div id="timer-bar"><div id="timer-fill"></div></div>
+
+            <div class="game-container">
+                <div id="board" class="grid-5x5"></div>
+            </div>
+
+            <div class="controls">
+                <div class="status-msg" id="status-msg">SELECT YOUR NEXT MOVE</div>
+                <div class="btn-group">
+                    <button id="btn-feint" class="sub-btn">FEINT (3)</button>
+                    <button id="btn-submit" class="neon-btn-small" disabled>LOCK IN</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- リザルト画面 -->
+        <div id="result-overlay" class="overlay hidden">
+            <div class="result-box">
+                <h2 id="result-title">VICTORY</h2>
+                <p id="result-desc"></p>
+                <button onclick="location.reload()" class="neon-btn">REBOOT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-firestore-compat.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
